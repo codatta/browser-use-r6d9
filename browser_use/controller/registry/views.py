@@ -10,6 +10,7 @@ class RegisteredAction(BaseModel):
 	description: str
 	function: Callable
 	param_model: Type[BaseModel]
+	requires_browser: bool = False
 
 	model_config = ConfigDict(arbitrary_types_allowed=True)
 

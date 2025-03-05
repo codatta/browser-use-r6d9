@@ -8,13 +8,14 @@ import os
 import sys
 
 from browser_use.browser.browser import Browser, BrowserConfig
-from browser_use.browser.context import BrowserContext
+from browser_use.browser.context import BrowserContext, BrowserContextConfig
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import asyncio
 
 from langchain_openai import ChatOpenAI
 
-from browser_use import Agent, AgentHistoryList
+from browser_use import Agent, AgentHistoryList, Controller
 
 llm = ChatOpenAI(model='gpt-4o')
 # browser = Browser(config=BrowserConfig(headless=False))

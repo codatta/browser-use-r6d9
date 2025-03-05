@@ -19,7 +19,7 @@ def test_take_full_page_screenshot(browser):
 	browser.go_to_url('https://example.com')
 
 	# Take full page screenshot
-	screenshot_b64 = browser.take_screenshot(full_page=True)
+	screenshot_b64, screenshot = browser.take_screenshot(full_page=True)
 
 	# Verify screenshot is not empty and is valid base64
 	assert screenshot_b64 is not None

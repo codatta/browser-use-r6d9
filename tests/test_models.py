@@ -4,14 +4,17 @@ import os
 import pytest
 import requests
 from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from pydantic import SecretStr
 
 from browser_use.agent.service import Agent
-from browser_use.agent.views import AgentHistoryList
+from browser_use.agent.views import ActionResult, AgentHistoryList
 from browser_use.browser.browser import Browser, BrowserConfig
+from browser_use.browser.views import BrowserState, TabInfo
+from browser_use.dom.views import DOMElementNode, DOMTextNode
 
 
 @pytest.fixture(scope='function')
@@ -47,19 +50,6 @@ api_key_anthropic = SecretStr(os.getenv('ANTHROPIC_API_KEY') or '')
 # pytest -s -v tests/test_models.py
 @pytest.fixture(
 	params=[
-		ChatOpenAI(model='gpt-4o'),
-		ChatOpenAI(model='gpt-4o-mini'),
-		AzureChatOpenAI(
-			model='gpt-4o',
-			api_version='2024-10-21',
-			azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT', ''),
-			api_key=SecretStr(os.getenv('AZURE_OPENAI_KEY', '')),
-		),
-		# ChatOpenAI(
-		# base_url='https://api.deepseek.com/v1',
-		# model='deepseek-reasoner',
-		# api_key=api_key_deepseek,
-		# ),
 		# run: ollama start
 		ChatOllama(
 			model='qwen2.5:latest',
@@ -78,6 +68,14 @@ api_key_anthropic = SecretStr(os.getenv('ANTHROPIC_API_KEY') or '')
 			stop=None,
 			api_key=api_key_anthropic,
 		),
+		ChatOpenAI(model='gpt-4o'),
+		ChatOpenAI(model='gpt-4o-mini'),
+		AzureChatOpenAI(
+			model='gpt-4o',
+			api_version='2024-10-21',
+			azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT', ''),
+			api_key=SecretStr(os.getenv('AZURE_OPENAI_KEY', '')),
+		),
 		ChatGoogleGenerativeAI(model='gemini-2.0-flash-exp', api_key=api_key_gemini),
 		ChatGoogleGenerativeAI(model='gemini-1.5-pro', api_key=api_key_gemini),
 		ChatGoogleGenerativeAI(model='gemini-1.5-flash-latest', api_key=api_key_gemini),
@@ -88,13 +86,12 @@ api_key_anthropic = SecretStr(os.getenv('ANTHROPIC_API_KEY') or '')
 		),
 	],
 	ids=[
-		'gpt-4o',
-		'gpt-4o-mini',
-		'azure-gpt-4o',
-		#'deepseek-reasoner',
 		'qwen2.5:latest',
 		'azure-gpt-4o-mini',
 		'claude-3-5-sonnet',
+		'gpt-4o',
+		'gpt-4o-mini',
+		'azure-gpt-4o',
 		'gemini-2.0-flash-exp',
 		'gemini-1.5-pro',
 		'gemini-1.5-flash-latest',
@@ -112,7 +109,7 @@ async def test_model_search(llm, context):
 	print(f'\nTesting model: {model_name}')
 
 	use_vision = True
-	models_without_vision = ['deepseek-chat', 'deepseek-reasoner']
+	models_without_vision = ['deepseek-chat']
 	if hasattr(llm, 'model') and llm.model in models_without_vision:
 		use_vision = False
 	elif hasattr(llm, 'model_name') and llm.model_name in models_without_vision:
@@ -127,7 +124,7 @@ async def test_model_search(llm, context):
 			response = requests.get('http://127.0.0.1:11434/')
 			if response.status_code != 200:
 				raise
-		except Exception:
+		except Exception as e:
 			raise Exception('Ollama is not running - start with `ollama start`')
 
 	agent = Agent(
@@ -138,11 +135,9 @@ async def test_model_search(llm, context):
 		use_vision=use_vision,
 	)
 	history: AgentHistoryList = await agent.run(max_steps=2)
-	done = history.is_done()
-	successful = history.is_successful()
 	action_names = history.action_names()
 	print(f'Actions performed: {action_names}')
-	errors = [e for e in history.errors() if e is not None]
+	errors = history.errors()
 	errors = '\n'.join(errors)
 	passed = False
 	if 'search_google' in action_names:
@@ -154,6 +149,8 @@ async def test_model_search(llm, context):
 
 	else:
 		passed = False
-	print(f'Model {model_name}: {"✅ PASSED - " if passed else "❌ FAILED - "} Done: {done} Successful: {successful}')
+	print(f'Model {model_name}: {"✅ PASSED" if passed else "❌ FAILED"}')
 
-	assert passed, f'Model {model_name} not working\nActions performed: {action_names}\nErrors: {errors}'
+	assert passed, (
+		f'Model {model_name} not working\nActions performed: {action_names}\nErrors: {errors}'
+	)

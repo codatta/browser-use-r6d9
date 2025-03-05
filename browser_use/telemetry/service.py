@@ -43,7 +43,7 @@ class ProductTelemetry:
 			self._posthog_client = None
 		else:
 			logging.info(
-				'Anonymized telemetry enabled. See https://docs.browser-use.com/development/telemetry for more information.'
+				'Anonymized telemetry enabled. See https://github.com/browser-use/browser-use for more information.'
 			)
 			self._posthog_client = Posthog(
 				project_api_key=self.PROJECT_API_KEY,
@@ -64,7 +64,7 @@ class ProductTelemetry:
 			return
 
 		if self.debug_logging:
-			logger.debug(f'Telemetry event: {event.name} {event.properties}')
+			logger.info(f'Telemetry event: {event.name} {event.properties}')
 		self._direct_capture(event)
 
 	def _direct_capture(self, event: BaseTelemetryEvent) -> None:
