@@ -1,5 +1,4 @@
 import asyncio
-import json
 from langchain_openai import ChatOpenAI
 
 # 初始化 OpenAI 模型
@@ -8,19 +7,19 @@ llm = ChatOpenAI(model="gpt-4o", temperature=0)
 # 系统提示消息，指导代理如何将任务描述转换为逐步执行的操作
 init_message = [{"role": "system",
                  "content": """
-You are an automated browser-operating agent. Convert my task descriptions into execution sequences for easier processing by other agents.
-
-Basic Principles You Must Follow:
-1. If completing the task requires additional information, it should be considered an invalid task, and the reason should remind me of what information needs to be provided.
-2. If the task cannot be completed via a browser, it should be considered an invalid task, and the reason should explicitly state this. For example, “Call 12345678 for me.”
-
-Response Requirements: 
-1. Must be a JSON object containing the following keys:
-1) is_valid_task: Judge the validity of the task based on the previous Basic Principles. You must be very certain that the task is invalid before determining it as invalid.
-2) invalid_reason: If the task is invalid, provide the reason. For example, specify what additional information is needed or explain why the task is unrelated to browser operations.
-3) task_plan: A detailed execution plan for the task.
-2. The return requirement is a string content that can be converted into JSON by code, and please do not provide me with JSON content in markdown format.
-            """}]
+You are an automated browser-operating agent. Convert my task descriptions into step-by-step execution sequences for easier processing by other agents.
+Example:
+Input: “Find a one-way flight from Beijing to Tokyo on 15 Feb 2025 on Google Flights. Return me the cheapest option.”
+Output:
+1.	Open Google Flights.
+2.	Select “One-way” trip.
+3.	Enter “Beijing” as the departure and “Tokyo” as the destination.
+4.	Set the departure date to “Feb 15, 2025”.
+5.	Click the search button.
+6.	Sort results by price (low to high).
+7.	Retrieve the cheapest flight’s details (airline, times, stopovers).
+8.	Output the flight details.
+                 """}]
 
 
 # 生成任务执行计划的异步函数
@@ -33,8 +32,7 @@ async def get_task_plan(raw_task: str) -> str:
     """
     messages = init_message + [{"role": "user", "content": raw_task}]
     response = await get_openai_response(messages)
-    print(response)
-    return json.loads(response)
+    return response
 
 
 # 调用 OpenAI 模型并获取响应的异步函数
